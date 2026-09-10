@@ -24,3 +24,16 @@ build/
 
 # AI conversations captured by pre-commit hook
 # (intentionally not ignored — they are part of the evaluation)
+
+# AI tooling, skills & local graph
+.agents/
+.claude/
+.codegraph/
+skills-lock.json
+
+# Local logs & raw terminal recording
+terminal_log.txt
+*.log
+
+# Assignment document (local reference)
+Senior Software Assignment*.md

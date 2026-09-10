@@ -21,6 +21,39 @@ export type ApiTask = {
   assignee?: ApiUser | null;
 };
 
+export type TaskComment = {
+  id: string;
+  taskId: string;
+  author: ApiUser;
+  body: string;
+  createdAt: string;
+};
+
+export type ActivityAction =
+  | "task_created"
+  | "status_changed"
+  | "assignee_changed"
+  | "comment_added";
+
+export type Activity = {
+  id: string;
+  projectId: string;
+  user: ApiUser;
+  action: ActivityAction;
+  entityType: string;
+  entityId: string | null;
+  details: Record<string, any>;
+  createdAt: string;
+};
+
+export type ExportResult = {
+  ok: boolean;
+  exported: number;
+  failed: number;
+  total: number;
+  errors?: Array<{ task_id: string; title: string; error: string }>;
+};
+
 export type ApiProjectMember = {
   id: string;
   role: Role;

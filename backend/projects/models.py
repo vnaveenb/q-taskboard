@@ -60,3 +60,37 @@ class Task(models.Model):
     class Meta:
         db_table = 'tasks'
         indexes = [models.Index(fields=['project', 'status'])]
+
+
+class TaskComment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='task_comments')
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'task_comments'
+        ordering = ['created_at']
+
+
+class Activity(models.Model):
+    ACTION_CHOICES = [
+        ('task_created', 'Task Created'),
+        ('status_changed', 'Status Changed'),
+        ('assignee_changed', 'Assignee Changed'),
+        ('comment_added', 'Comment Added'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='activities')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='activities')
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    entity_type = models.CharField(max_length=20, default='task')
+    entity_id = models.UUIDField(null=True, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'activities'
+        ordering = ['-created_at']
