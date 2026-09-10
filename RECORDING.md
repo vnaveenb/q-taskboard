@@ -2,8 +2,7 @@
 
 Please paste the link to your narrated walkthrough screen recording below before submission:
 
-- **Recording URL**: [Insert your Loom / video link here]
-- **Duration**: [e.g. ~10-15 minutes]
+- **Recording URL**: https://www.loom.com/share/10f125d1ff1343ae9c069e4ab142754e
 - **Summary of Topics Covered**:
   1. Architecture overview and project setup.
   2. Demonstration of Critical Vulnerabilities (SQL Injection & BOLA) before and after fixes.
