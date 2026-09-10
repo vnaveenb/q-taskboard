@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, getToken } from "@/lib/api-client";
 import { triggerProjectExport } from "@/lib/airtable";
+import { formatActivityDate } from "@/lib/date";
 import { Header } from "@/components/Header";
 import { StatusColumn } from "@/components/StatusColumn";
 import { TaskDetail } from "@/components/TaskDetail";
@@ -14,7 +15,7 @@ import type {
   ExportResult,
   TaskStatus,
 } from "@/types";
-import { STATUS_ORDER } from "@/types";
+import { STATUS_ORDER, STATUS_LABELS } from "@/types";
 
 export default function ProjectPage() {
   const navigate = useNavigate();
@@ -109,8 +110,11 @@ export default function ProjectPage() {
     switch (a.action) {
       case "task_created":
         return `created ${title}`;
-      case "status_changed":
-        return `moved ${title} from ${details.old_status} to ${details.new_status}`;
+      case "status_changed": {
+        const oldLabel = STATUS_LABELS[details.old_status as TaskStatus] || details.old_status;
+        const newLabel = STATUS_LABELS[details.new_status as TaskStatus] || details.new_status;
+        return `moved ${title} from ${oldLabel} to ${newLabel}`;
+      }
       case "assignee_changed":
         return `reassigned ${title} to ${details.new_assignee || "unassigned"}`;
       case "comment_added":
@@ -286,11 +290,7 @@ export default function ProjectPage() {
                               </span>
                             </span>
                             <span className="text-[11px] text-muted ml-2 shrink-0">
-                              {new Date(a.createdAt).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}{" "}
-                              · {new Date(a.createdAt).toLocaleDateString()}
+                              {formatActivityDate(a.createdAt || a.created_at)}
                             </span>
                           </div>
                         </li>
@@ -327,6 +327,7 @@ export default function ProjectPage() {
       {/* Task Details Modal */}
       {activeTask && project && (
         <TaskDetail
+          key={activeTask.id}
           task={activeTask}
           projectId={id!}
           members={project.memberships}

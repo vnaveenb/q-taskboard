@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
+import { formatDateTime } from "@/lib/date";
 import type { ApiTask, ApiProjectMember, TaskStatus, TaskComment, Role } from "@/types";
 import { STATUS_LABELS, STATUS_ORDER } from "@/types";
 
@@ -17,7 +18,9 @@ export function TaskDetail({ task, projectId, members, currentUserRole, onClose 
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
   const [status, setStatus] = useState<TaskStatus>(task.status);
-  const [assigneeId, setAssigneeId] = useState<string>(task.assigneeId ?? "");
+  const [assigneeId, setAssigneeId] = useState<string>(
+    task.assigneeId ?? (task as any).assignee_id ?? ""
+  );
   const [newComment, setNewComment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [commentError, setCommentError] = useState<string | null>(null);
@@ -100,7 +103,14 @@ export function TaskDetail({ task, projectId, members, currentUserRole, onClose 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4 flex-shrink-0">
-          <h2 className="text-lg font-semibold">edit task</h2>
+          <div>
+            <h2 className="text-lg font-semibold">edit task</h2>
+            {(task.createdAt || task.created_at) && (
+              <p className="text-xs text-muted mt-0.5">
+                Created {formatDateTime(task.createdAt || task.created_at)}
+              </p>
+            )}
+          </div>
           <button onClick={onClose} className="text-muted hover:text-white">
             ✕
           </button>
@@ -184,7 +194,7 @@ export function TaskDetail({ task, projectId, members, currentUserRole, onClose 
                   <div key={c.id} className="bg-bg rounded p-3 text-xs border border-border">
                     <div className="flex items-center justify-between text-muted mb-1">
                       <span className="font-semibold text-white">{c.author.name}</span>
-                      <span>{new Date(c.createdAt).toLocaleString()}</span>
+                      <span>{formatDateTime(c.createdAt || c.created_at)}</span>
                     </div>
                     <p className="text-sm whitespace-pre-wrap">{c.body}</p>
                   </div>

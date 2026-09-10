@@ -172,7 +172,7 @@ class TaskListCreateView(APIView):
                 title=title,
                 description=request.data.get('description') or None,
                 status=task_status,
-                assignee_id=request.data.get('assigneeId') or None,
+                assignee_id=request.data.get('assigneeId') or request.data.get('assignee_id') or None,
                 created_by=request.user,
                 position=position,
             )
@@ -220,6 +220,8 @@ class TaskDetailView(APIView):
                 task.status = new_status
             if 'assigneeId' in request.data:
                 task.assignee_id = request.data['assigneeId'] or None
+            elif 'assignee_id' in request.data:
+                task.assignee_id = request.data['assignee_id'] or None
             task.save()
 
             # Part 3b: Record status change activity if changed
@@ -369,6 +371,14 @@ class MemberAddView(APIView):
             user = UserModel.objects.get(email=email)
         except UserModel.DoesNotExist:
             return Response({'error': 'user not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response({'error': 'project not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if user == project.owner and role != 'admin':
+            return Response({'error': 'cannot change project owner role from admin'}, status=status.HTTP_400_BAD_REQUEST)
 
         membership_obj, created = Membership.objects.get_or_create(
             user=user,

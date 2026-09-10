@@ -88,6 +88,17 @@ class TestProjects:
         response = client.get(f'/api/projects/{project.id}')
         assert response.status_code == 403
 
+    def test_owner_role_cannot_be_demoted(self, auth_client, user):
+        project = Project.objects.create(name='P', owner=user)
+        Membership.objects.create(user=user, project=project, role='admin')
+
+        res = auth_client.post(f'/api/projects/{project.id}/members', {
+            'email': user.email,
+            'role': 'viewer',
+        }, format='json')
+        assert res.status_code == 400
+        assert 'cannot change project owner role' in res.data['error']
+
 
 @pytest.mark.django_db
 class TestTasks:
@@ -171,6 +182,33 @@ class TestTasks:
         task.refresh_from_db()
         assert task.title == 'Updated Title'
 
+    def test_task_dual_casing_and_assignee_preservation(self, auth_client, user, other_user):
+        project = Project.objects.create(name='P', owner=user)
+        Membership.objects.create(user=user, project=project, role='admin')
+        Membership.objects.create(user=other_user, project=project, role='member')
+
+        # Create with assigneeId
+        res = auth_client.post(f'/api/projects/{project.id}/tasks', {
+            'title': 'Test Assignee',
+            'assigneeId': str(other_user.id),
+        }, format='json')
+        assert res.status_code == 201
+        task_data = res.data['task']
+        assert task_data['assigneeId'] == str(other_user.id)
+        assert task_data['assignee_id'] == str(other_user.id)
+        assert 'createdAt' in task_data and 'created_at' in task_data
+        assert 'updatedAt' in task_data and 'updated_at' in task_data
+        assert task_data['projectId'] == str(project.id)
+
+        # Patch with assignee_id (snake_case)
+        task_id = task_data['id']
+        res_patch = auth_client.patch(f'/api/tasks/{task_id}', {
+            'assignee_id': str(user.id),
+        }, format='json')
+        assert res_patch.status_code == 200
+        assert res_patch.data['task']['assigneeId'] == str(user.id)
+        assert res_patch.data['task']['assignee_id'] == str(user.id)
+
 
 @pytest.mark.django_db
 class TestTaskComments:
@@ -203,6 +241,11 @@ class TestTaskComments:
         assert len(res_all.data['comments']) == 2
         assert res_all.data['comments'][0]['body'] == 'First comment!'
         assert res_all.data['comments'][1]['body'] == 'Second comment!'
+        # Verified dual-casing timestamps and task ID
+        first = res_all.data['comments'][0]
+        assert 'createdAt' in first and 'created_at' in first
+        assert first['createdAt'] is not None and first['created_at'] is not None
+        assert first['taskId'] == str(task.id) and first['task_id'] == str(task.id)
 
     def test_comment_empty_body_rejected(self, auth_client, user):
         project = Project.objects.create(name='P', owner=user)
@@ -211,6 +254,11 @@ class TestTaskComments:
 
         res = auth_client.post(f'/api/tasks/{task.id}/comments', {'body': '   '}, format='json')
         assert res.status_code == 400
+
+    def test_comment_nonexistent_task_returns_404(self, auth_client, user):
+        import uuid
+        res = auth_client.get(f'/api/tasks/{uuid.uuid4()}/comments')
+        assert res.status_code == 404
 
 
 @pytest.mark.django_db
@@ -240,6 +288,14 @@ class TestActivityFeed:
 
         # Verified newest-first reverse chronological ordering
         assert actions == ['comment_added', 'assignee_changed', 'status_changed', 'task_created']
+
+        # Verified dual-cased timestamps and fields
+        first_act = res_feed.data['activities'][0]
+        assert 'createdAt' in first_act and 'created_at' in first_act
+        assert first_act['createdAt'] is not None and first_act['created_at'] is not None
+        assert 'projectId' in first_act and 'project_id' in first_act
+        assert first_act['projectId'] == str(project.id)
+        assert 'entityType' in first_act and 'entity_type' in first_act
 
     def test_activity_failure_rolls_back_mutation(self, auth_client, user):
         project = Project.objects.create(name='P', owner=user)
